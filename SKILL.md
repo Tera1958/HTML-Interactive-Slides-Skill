@@ -68,6 +68,7 @@ Determine what the user wants:
 - **Mode A: New Presentation** — Create from scratch. Go to Phase 1.
 - **Mode B: PPT Conversion** — Convert a .pptx file. Go to Phase 4.
 - **Mode C: Enhancement** — Improve an existing HTML presentation. Read it, understand it, enhance. **Follow Mode C modification rules below.**
+- **Mode D: Interactive Showcase** — Single-page, multi-panel interactive presentation with clickable tags, carousels, or canvas effects. Follow Mode D rules below.
 
 ### Mode C: Modification Rules
 
@@ -80,6 +81,42 @@ When enhancing existing presentations, viewport fitting is the biggest risk:
 5. **Proactively reorganize:** If modifications will cause overflow, automatically split content and inform the user. Don't wait to be asked
 
 **When adding images to existing slides:** Move image to new slide or reduce other content first. Never add images without checking if existing content already fills the viewport.
+
+---
+
+### Mode D: Interactive Showcase Rules
+
+A single HTML page where the main slide shows floating/scattered interactive elements (tags, cards, buttons). Clicking them opens overlay panels — no page navigation needed.
+
+**Core architecture:**
+- One `.slide` fills the full viewport (no scroll)
+- Interactive elements (`.tag`, `.card`, etc.) are positioned absolutely within `.arena`
+- Each element has a `data-key` attribute mapping to a panel ID (`panel-{key}`)
+- A shared `.backdrop` blurs/dims the background when a panel is open
+- `activeKey` state variable tracks which panel is open; only one panel at a time
+
+**Panel types available (check `EFFECT_LIBRARY.md`):**
+| Panel type | EFFECT ID | Use when |
+|---|---|---|
+| Standard detail card | EFFECT-001 | Single item of info to expand |
+| Story carousel (image + text, paginated) | EFFECT-002 | Multiple sub-stories / evidence items |
+| Mac browser frame | EFFECT-003 | Social media, website, product screenshot |
+| Stat bar (dark, animated counters) | EFFECT-004 | Metrics inside another panel |
+| Fullscreen canvas text-fly | EFFECT-005 | "Stream of consciousness", observations |
+
+**Tag deletion checklist** (when removing an interactive element):
+1. Remove the `.tag` / element HTML
+2. Remove its `#panel-X` HTML block
+3. Remove `close-X` from the `closePanel` listener array
+4. Check remaining `data-i` positions — redistribute if layout feels unbalanced
+
+**Animation re-trigger pattern** (for panels with animated content):
+```javascript
+// Re-trigger CSS animations when panel opens:
+element.style.animation = 'none';
+void element.offsetWidth;  // force reflow
+element.style.animation = '';
+```
 
 ---
 
@@ -163,6 +200,21 @@ Which style preview do you prefer? Options: Style A: [Name] / Style B: [Name] / 
 
 If "Mix elements", ask for specifics.
 
+### Step 2.4: File Naming
+
+After the user picks a style, ask for the presentation filename (header: "File Name"):
+"What would you like to name this presentation?"
+
+**Default suggestion**: Auto-generate a short name based on the presentation purpose (e.g., `pitch-deck`, `tutorial-react`, `conference-summary`, `team-update`) + today's date if relevant.
+
+**Naming rules:**
+- Lowercase letters + hyphens only (no spaces, no special characters)
+- Max 30 characters
+- Format: `my-presentation-name`
+- This becomes `[presentation-name]` used in all subsequent phases (Phase 3 file naming, Phase 5 delivery info)
+
+**The name determines the output filenames in Phase 3.**
+
 ---
 
 ## Phase 3: Generate Presentation
@@ -175,6 +227,12 @@ If images were provided, the slide outline already incorporates them from Step 1
 - [html-template.md](html-template.md) — HTML architecture and JS features
 - [viewport-base.css](viewport-base.css) — Mandatory CSS (include in full)
 - [animation-patterns.md](animation-patterns.md) — Animation reference for the chosen feeling
+- **[EFFECT_LIBRARY.md](EFFECT_LIBRARY.md) — Check for matching effects before writing new code**
+
+**Effect reuse check:** For each slide or section, scan `EFFECT_LIBRARY.md` for a match:
+- Match >80%: reuse the effect silently, mention it in Phase 5 summary
+- Match 50–80%: ask user before reusing
+- Match <50%: write new code, then offer to save it to the library
 
 **Key requirements:**
 - Single self-contained HTML file, all CSS/JS inline
@@ -182,6 +240,68 @@ If images were provided, the slide outline already incorporates them from Step 1
 - Use fonts from Fontshare or Google Fonts — never system fonts
 - Add detailed comments explaining each section
 - Every section needs a clear `/* === SECTION NAME === */` comment block
+
+### Layout Density Principle
+
+**Fill the page. Eliminate large visual whitespace.**
+
+Every slide should feel **visually full** — content, cards, graphics, or decorative elements should occupy the vast majority of the viewport (target: **≥ 85% visual coverage**). This is a hard rule, not a suggestion.
+
+**Specifics:**
+- **No floating islands**: Content elements must not appear as small isolated blocks surrounded by empty space. Use multi-column grids, card grids, or layered compositions to fill the horizontal and vertical space.
+- **Extend to edges**: Padding/margins should be minimal (`clamp(1.5rem, 3vw, 3rem)` max side padding, `clamp(1rem, 2vh, 2rem)` max top/bottom). The content area should feel edge-to-edge.
+- **Vertical fill**: Use `flex: 1` + `min-height: 0` to stretch content areas to fill remaining viewport height. Avoid fixed heights that leave dead space at the bottom.
+- **Layered backgrounds**: When content alone doesn't fill the space, use subtle overlays (grids, dot patterns, gradient fades) to eliminate visual emptiness — but never leave the background bare.
+- **Compact spacing**: Use tighter internal gaps between elements (`gap: 0.5rem–1rem`) rather than generous whitespace. Content should feel dense and information-rich.
+- **Header + footer anchoring**: Headers and navigation bars should be flush with content areas (small padding), not separated by excessive whitespace.
+- **Multi-element compositions**: Prefer layouts with 3+ visible elements (cards, columns, badges, connectors, legends) over single large text blocks. Dense multi-element layouts feel more professional and engaging.
+
+**Anti-patterns to avoid:**
+- A single centered text block with nothing else on the slide
+- Large margins/padding leaving > 15% of the viewport empty
+- Fixed-width containers that don't scale to fill available space
+- Slides where the content area ends well above the bottom edge
+
+### Slide Numbering Rules
+
+**Every slide must have a structured number and semantic label.** Use the `[presentation-name]` from Step 2.4.
+
+**File naming format (multi-file mode):**
+```
+[presentation-name]-01-[keyword].html
+[presentation-name]-02-[keyword].html
+...
+[presentation-name]-toc.html
+```
+
+**HTML comment format (single-file mode):**
+```html
+<!-- Slide 01: Full Slide Title -->
+<section class="slide">...</section>
+
+<!-- Slide 02: Full Slide Title -->
+<section class="slide">...</section>
+```
+
+**Numbering conventions:**
+- Two-digit zero-padded number prefix: `01`, `02`, ... `10`, `11`
+- Keyword: max 3 words from the slide title, lowercase, hyphen-separated (e.g., `problem-statement`, `our-solution`, `key-features`)
+- Cover slide is always `00` (or `01` if no separate cover)
+- Closing/thank-you slide gets the next sequential number
+- TOC page: `[presentation-name]-toc.html`
+
+**Examples:**
+```
+my-pitch-01-intro.html          → <!-- Slide 01: Introduction -->
+my-pitch-02-problem.html        → <!-- Slide 02: The Problem -->
+my-pitch-03-solution.html       → <!-- Slide 03: Our Solution -->
+my-pitch-04-features.html       → <!-- Slide 04: Key Features -->
+my-pitch-05-demo.html           → <!-- Slide 05: Live Demo -->
+my-pitch-06-closing.html        → <!-- Slide 06: Thank You -->
+my-pitch-toc.html               → Table of Contents
+```
+
+**Auto-generation:** When adding slides incrementally, AI must auto-assign the next available number. Never reuse or skip numbers. If slides are reordered, renumber all affected slides.
 
 ---
 
@@ -205,6 +325,51 @@ When converting PowerPoint files:
    - Navigation: Arrow keys, Space, scroll/swipe, click nav dots
    - How to customize: `:root` CSS variables for colors, font link for typography, `.reveal` class for animations
    - If inline editing was enabled: Hover top-left corner or press E to enter edit mode, click any text to edit, Ctrl+S to save
+   - **If any effects from `EFFECT_LIBRARY.md` were reused**, mention which ones and where
+
+---
+
+## Phase E: Effect Capture
+
+**Triggered by:**
+- User explicitly asks to save an effect: *"save this stat bar for reuse"*
+- AI proactively offers after using a novel effect: *"I created a new effect here. Save it to your library?"*
+
+**Steps:**
+1. Identify the effect boundaries (which CSS + JS + HTML belongs to this effect)
+2. Extract parameterizable values (colors → `var(--accent)`, counts → comments)
+3. Write a new `## EFFECT-XXX` entry in `EFFECT_LIBRARY.md`:
+   - Name, user description, trigger semantics, categories
+   - Parameters table
+   - CSS / JS / HTML snippets (self-contained, copy-paste ready)
+   - Source file and date
+4. Confirm to user: *"Saved as EFFECT-006. I'll suggest it when I see similar content in the future."*
+
+**Effect granularity rules:**
+- Store **complete reusable components** (e.g., full mac-browser panel) AND their **atomic sub-effects** (e.g., chipIn animation) separately if the sub-effect is reusable alone
+- All color values must use `var(--accent-color, #fallback)` — never hardcode theme colors
+- All size values must use `clamp()` — never fixed px unless structural (e.g., border width)
+
+---
+
+## Vercel Static Deployment SOP
+
+When deploying a multi-file HTML presentation (e.g., `slide-01.html` through `slide-toc.html`):
+
+1. **`vercel.json` configuration:**
+```json
+{
+  "outputDirectory": "tera-intro",
+  "routes": [
+    { "src": "/", "dest": "/slide-toc.html" }
+  ]
+}
+```
+2. If there is no `index.html`, the root rewrite to a named file is **required** — Vercel will 404 without it
+3. Files with spaces in filenames (e.g., `social media.jpg`) are valid in Vercel static hosting
+4. `.mov` and large media files: Vercel has a 100MB single-file limit
+5. All media files must be in the same directory as the HTML files to be included in the deploy
+6. **Re-deploy command:** `npx vercel --prod --yes`
 
 ---
 
@@ -216,4 +381,5 @@ When converting PowerPoint files:
 | [viewport-base.css](viewport-base.css) | Mandatory responsive CSS — copy into every presentation | Phase 3 (generation) |
 | [html-template.md](html-template.md) | HTML structure, JS features, code quality standards | Phase 3 (generation) |
 | [animation-patterns.md](animation-patterns.md) | CSS/JS animation snippets and effect-to-feeling guide | Phase 3 (generation) |
+| [EFFECT_LIBRARY.md](EFFECT_LIBRARY.md) | User-approved reusable effects — check before writing new code | Phase 3 (generation), Phase E (capture) |
 | [scripts/extract-pptx.py](scripts/extract-pptx.py) | Python script for PPT content extraction | Phase 4 (conversion) |

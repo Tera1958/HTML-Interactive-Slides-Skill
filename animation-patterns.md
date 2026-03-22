@@ -2,6 +2,8 @@
 
 Use this reference when generating presentations. Match animations to the intended feeling.
 
+> **Note:** This file contains general-purpose animation patterns. For complete user-approved interactive effects (floating tags, stat bars, canvas text-fly, story carousels, mac browser panels), check **[EFFECT_LIBRARY.md](EFFECT_LIBRARY.md)** first — these are ready-to-copy components with full HTML + CSS + JS.
+
 ## Effect-to-Feeling Guide
 
 | Feeling | Animations | Visual Cues |
@@ -99,6 +101,42 @@ class TiltEffect {
 }
 ```
 
+## Interactive Panel Animations
+
+Effects for panels that open/close on click — used in Mode D (Interactive Showcase).
+
+```css
+/* Panel pop-in (scale + fade) */
+.panel {
+  transform: translate(-50%,-50%) scale(.92);
+  opacity: 0; pointer-events: none;
+  transition: opacity .22s cubic-bezier(.16,1,.3,1), transform .22s cubic-bezier(.16,1,.3,1);
+}
+.panel.show {
+  opacity: 1; pointer-events: all;
+  transform: translate(-50%,-50%) scale(1);
+}
+
+/* Backdrop blur overlay */
+.backdrop {
+  position: absolute; inset: 0; z-index: 15;
+  background: rgba(245,245,240,.6);
+  backdrop-filter: blur(2px);
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s;
+}
+.backdrop.show { opacity: 1; pointer-events: all; }
+
+/* chipIn — for stat counters, list items entering a panel */
+@keyframes chipIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Re-trigger CSS animation without class toggle */
+/* element.style.animation = 'none'; void element.offsetWidth; element.style.animation = ''; */
+```
+
 ## Troubleshooting
 
 | Problem | Fix |
@@ -108,3 +146,5 @@ class TiltEffect {
 | Scroll snap not working | Ensure `scroll-snap-type: y mandatory` on html; each slide needs `scroll-snap-align: start` |
 | Mobile issues | Disable heavy effects at 768px breakpoint; test touch events; reduce particle count |
 | Performance issues | Use `will-change` sparingly; prefer `transform`/`opacity` animations; throttle scroll handlers |
+| chipIn not re-playing | Use `animation = 'none'` → force reflow with `void el.offsetWidth` → reset `animation = ''` |
+| Canvas text persisting after close | Always call `ctx.clearRect(0,0,w,h)` and `cancelAnimationFrame()` in stopObserver() |
