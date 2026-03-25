@@ -82,6 +82,18 @@ When enhancing existing presentations, viewport fitting is the biggest risk:
 
 **When adding images to existing slides:** Move image to new slide or reduce other content first. Never add images without checking if existing content already fills the viewport.
 
+#### Layout Fill & Vertical Distribution Principles
+
+These rules apply whenever modifying existing slide layouts to improve fill rate or vertical spacing:
+
+6. **Eliminate top-heavy clustering:** If slide content is bunched at the top with blank space below, switch `justify-content` to `space-between` on the `.slide-inner` flex container. Never leave the bottom half of a slide empty.
+7. **Stretch multi-column layouts:** When a slide uses two or more columns, add `align-items: stretch` to the row container so all columns grow to equal height. Each column should use `display: flex; flex-direction: column`.
+8. **Cards fill their container:** Cards and content blocks inside columns must use `flex: 1; display: flex; flex-direction: column; justify-content: center` so they expand to fill the available column height rather than shrinking to content size.
+9. **Visual fill target ≥ 85%:** After any layout modification, the content area should visually cover ≥ 85% of the viewport. If content alone cannot achieve this, add subtle background layers (dot patterns, gradient fades, grid overlays) — never leave the background bare.
+10. **Eyebrow / label visibility:** Section labels (`.slide-eyebrow` or equivalent) should be legible and visually distinct. Use `font-weight: 700`, a slightly larger `clamp()` font size, and a capsule style (`border-radius: 999px`, light background fill + `1px solid` border) to ensure they read as headers, not footnotes.
+11. **Suppress decorative chrome when requested:** Page numbers (`.slide-num`), grid/noise texture overlays (`.slide::before`), and other chrome elements must be hideable via `display: none` without breaking layout. Always isolate chrome from structural layout code.
+12. **Prefer `space-between` over manual padding** for vertical rhythm in content-heavy slides. Reserve `justify-content: center` only for title/quote slides with a single focal element.
+
 ---
 
 ### Mode D: Interactive Showcase Rules
@@ -124,16 +136,19 @@ element.style.animation = '';
 
 **Ask ALL questions in a single AskUserQuestion call** so the user fills everything out at once:
 
-**Question 1 — Purpose** (header: "Purpose"):
+**Question 1 — Language** (header: "Language"):
+What language should this presentation be created in? Options: English / Chinese (中文)
+
+**Question 2 — Purpose** (header: "Purpose"):
 What is this presentation for? Options: Pitch deck / Teaching-Tutorial / Conference talk / Internal presentation
 
-**Question 2 — Length** (header: "Length"):
+**Question 3 — Length** (header: "Length"):
 Approximately how many slides? Options: Short 5-10 / Medium 10-20 / Long 20+
 
-**Question 3 — Content** (header: "Content"):
+**Question 4 — Content** (header: "Content"):
 Do you have content ready? Options: All content ready / Rough notes / Topic only
 
-**Question 4 — Inline Editing** (header: "Editing"):
+**Question 5 — Inline Editing** (header: "Editing"):
 Do you need to edit text directly in the browser after generation? Options:
 - "Yes (Recommended)" — Can edit text in-browser, auto-save to localStorage, export file
 - "No" — Presentation only, keeps file smaller
